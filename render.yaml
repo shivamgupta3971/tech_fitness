@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: fitveda
+    runtime: docker
+    region: oregon
+    plan: standard
+    numInstances: 1
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
