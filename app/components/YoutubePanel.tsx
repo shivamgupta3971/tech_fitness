@@ -104,9 +104,9 @@ const YoutubePanel = forwardRef<YoutubePanelHandle, Props>(function YoutubePanel
       <div className="relative w-full h-full flex items-center justify-center bg-black/50 border border-neon-cyan/10 rounded animate-border-breathe">
         <HudCorners />
         <PanelLabel>Reference</PanelLabel>
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center gap-3">
           <div
-            className="neon-text-cyan text-[40px] mb-3 opacity-20"
+            className="neon-text-cyan text-[40px] mb-1 opacity-20"
             style={{ fontFamily: "var(--font-audiowide)" }}
           >
             &#9654;
@@ -115,6 +115,25 @@ const YoutubePanel = forwardRef<YoutubePanelHandle, Props>(function YoutubePanel
             Paste a YouTube URL or generate with AI
           </p>
         </div>
+        {/* YouTube floating corner button */}
+        <a
+          href="https://www.youtube.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open YouTube"
+          className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 border border-red-500/40 bg-black/60 hover:bg-red-600/20 text-red-400/70 hover:text-red-400 transition-all duration-200 rounded text-[9px] tracking-[0.15em] uppercase group backdrop-blur-sm"
+          style={{ fontFamily: "var(--font-audiowide)" }}
+        >
+          <svg
+            className="w-3.5 h-3.5 text-red-500 group-hover:text-red-400 transition-colors flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+          </svg>
+          YouTube
+        </a>
       </div>
     );
   }

@@ -390,12 +390,20 @@ export default function Home() {
     }
   }, []);
 
-  // Read ?url= query param on mount (for Chrome extension)
+  // Read ?url=, ?mode=, and ?exercise= query param on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlParam = params.get("url");
     if (urlParam) {
       handleUrl(urlParam);
+    }
+    const modeParam = params.get("mode");
+    if (modeParam === "gym" || modeParam === "dance") {
+      setMode(modeParam);
+    }
+    const exerciseParam = params.get("exercise");
+    if (exerciseParam && !urlParam) {
+      setVideoTitle(`Target: ${exerciseParam.replace("ex_", "").replace(/_/g, " ").toUpperCase()}`);
     }
   }, [handleUrl]);
 

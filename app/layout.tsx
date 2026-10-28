@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Audiowide, Chakra_Petch } from "next/font/google";
 import "./globals.css";
+import AppNavigation from "./components/AppNavigation";
 
 const audiowide = Audiowide({
   weight: "400",
@@ -15,8 +16,8 @@ const chakraPetch = Chakra_Petch({
 });
 
 export const metadata: Metadata = {
-  title: "FITVEDA",
-  description: "Learn dance moves from YouTube videos with real-time AI coaching",
+  title: "FITVEDA - AI Fitness & Diet Arena",
+  description: "Real-time pose tracking, AI Diet Planner, and AI Exercise Planner with intelligent coaching",
 };
 
 export default function RootLayout({
@@ -27,9 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${audiowide.variable} ${chakraPetch.variable} antialiased`}
+        className={`${audiowide.variable} ${chakraPetch.variable} antialiased flex flex-col min-h-screen bg-[#050508]`}
       >
-        {children}
+        <AppNavigation />
+        <div className="flex-1 flex flex-col">{children}</div>
       </body>
     </html>
   );
