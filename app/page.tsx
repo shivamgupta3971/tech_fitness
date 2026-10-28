@@ -197,7 +197,7 @@ export default function Home() {
   const handleUrl = useCallback(async (url: string) => {
     const id = extractVideoId(url);
     if (!id) {
-      alert("Could not extract a YouTube video ID from that URL.");
+      alert("Could not load video. Please enter a valid video link (YouTube, Instagram Reels, Facebook, TikTok, WhatsApp, direct video URL).");
       return;
     }
 
@@ -245,7 +245,7 @@ export default function Home() {
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoId: id }),
+        body: JSON.stringify({ videoId: id, url }),
       });
 
       if (!res.ok || !res.body) {
@@ -861,7 +861,7 @@ export default function Home() {
               }`}
               style={{ fontFamily: "var(--font-audiowide)" }}
             >
-              YouTube URL
+              Video / Reel URL
             </button>
             <button
               onClick={() => setInputMode("generate")}

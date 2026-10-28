@@ -15,8 +15,7 @@ const FORMAT_SELECTOR =
   "bv*[vcodec^=avc1][height<=720]+ba[ext=m4a]/b[ext=mp4][height<=720]/bv*[height<=720]+ba/b";
 
 /** Run yt-dlp --dump-json and classify the video. Returns an SSE line. */
-async function classifyFromMetadata(videoId: string): Promise<string> {
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
+async function classifyFromMetadata(targetUrl: string): Promise<string> {
   const auth = ytdlpAuthArgs();
   return new Promise((resolve) => {
     execFile(
@@ -26,7 +25,7 @@ async function classifyFromMetadata(videoId: string): Promise<string> {
         "--no-download",
         "--no-warnings",
         ...auth.args,
-        url,
+        targetUrl,
       ],
       { maxBuffer: 10 * 1024 * 1024 },
       async (err, stdout) => {
@@ -56,14 +55,20 @@ async function classifyFromMetadata(videoId: string): Promise<string> {
 }
 
 export async function POST(request: NextRequest) {
-  const { videoId } = (await request.json()) as { videoId: string };
+  const { videoId, url: inputUrl } = (await request.json()) as { videoId: string; url?: string };
 
-  if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+  // Accept alphanumeric identifiers between 3 and 64 characters (YouTube IDs, ig_xxx, fb_xxx, vid_xxx, etc.)
+  if (!videoId || !/^[a-zA-Z0-9_-]{3,64}$/.test(videoId)) {
     return new Response(
-      JSON.stringify({ error: "Invalid video ID" }),
+      JSON.stringify({ error: "Invalid video identifier" }),
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
+
+  const targetUrl =
+    inputUrl && (inputUrl.startsWith("http://") || inputUrl.startsWith("https://"))
+      ? inputUrl
+      : `https://www.youtube.com/watch?v=${videoId}`;
 
   await mkdir(VIDEO_DIR, { recursive: true });
 
@@ -80,7 +85,7 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "progress", percent: 100 })}\n\n`));
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
         // Still classify even on cache hit (fast, no download)
-        const classifiedLine = await classifyFromMetadata(videoId);
+        const classifiedLine = await classifyFromMetadata(targetUrl);
         controller.enqueue(encoder.encode(classifiedLine));
         controller.close();
       },
@@ -96,13 +101,11 @@ export async function POST(request: NextRequest) {
     // File doesn't exist — proceed with download
   }
 
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
-
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
       // Launch classification in parallel (non-blocking)
-      const classifyPromise = classifyFromMetadata(videoId);
+      const classifyPromise = classifyFromMetadata(targetUrl);
 
       const auth = ytdlpAuthArgs();
       const proc = spawn("yt-dlp", [
@@ -112,7 +115,7 @@ export async function POST(request: NextRequest) {
         ...auth.args,
         "-o", outputPath,
         "--newline",
-        url,
+        targetUrl,
       ]);
 
       let stderrBuf = "";

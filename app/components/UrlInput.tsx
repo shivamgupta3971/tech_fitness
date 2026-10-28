@@ -117,7 +117,7 @@ export default function UrlInput({ onSubmit, initialUrl = "", lastSubmittedTitle
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onFocus={() => history.length > 0 && setOpen(true)}
-          placeholder="paste youtube url..."
+          placeholder="paste video link (YouTube, Instagram Reels, Facebook, TikTok, etc.)..."
           className="neon-input w-full pl-14 pr-4 py-2.5 rounded-none text-sm tracking-wide"
           style={{ fontFamily: "var(--font-chakra-petch)" }}
         />

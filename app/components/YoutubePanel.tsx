@@ -112,7 +112,7 @@ const YoutubePanel = forwardRef<YoutubePanelHandle, Props>(function YoutubePanel
             &#9654;
           </div>
           <p className="text-neon-cyan/25 text-xs tracking-wider uppercase">
-            Paste a YouTube URL or generate with AI
+            Paste any video URL (YouTube, Instagram, Facebook, TikTok) or generate with AI
           </p>
         </div>
         {/* YouTube floating corner button */}
