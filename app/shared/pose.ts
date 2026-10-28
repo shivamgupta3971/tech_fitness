@@ -106,25 +106,48 @@ export async function loadPose(): Promise<unknown> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const PoseObj = mpPose.Pose || (mpPose as any).default?.Pose || (window as any).Pose;
 
-  const pose = new PoseObj({
-    locateFile: (file: string) => {
-      if (file.endsWith(".data") || file.includes("packed_assets")) {
-        return file;
-      }
-      if (file.startsWith("http://") || file.startsWith("https://")) {
-        return file;
-      }
-      return `/${file.replace(/^\//, "")}`;
-    },
-  });
+  const createPose = (useCdn = false) => {
+    return new PoseObj({
+      locateFile: (file: string) => {
+        if (file.startsWith("http://") || file.startsWith("https://")) {
+          return file;
+        }
+        if (useCdn) {
+          return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
+        }
+        // Always return root-relative absolute path so it works across all routes
+        const cleaned = file.replace(/^\//, "");
+        return `/${cleaned}`;
+      },
+    });
+  };
 
-  pose.setOptions({
-    modelComplexity: 1,
-    smoothLandmarks: true,
-    enableSegmentation: false,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5,
-  });
+  const setupOptions = (instance: any) => {
+    instance.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+  };
+
+  let pose = createPose(false);
+  setupOptions(pose);
+
+  // Await internal WASM binary and asset loading to avoid race conditions
+  if (typeof (pose as any).initialize === "function") {
+    try {
+      await (pose as any).initialize();
+    } catch (err) {
+      console.warn("[MediaPipe Pose] Local initialization failed, falling back to CDN:", err);
+      pose = createPose(true);
+      setupOptions(pose);
+      if (typeof (pose as any).initialize === "function") {
+        await (pose as any).initialize();
+      }
+    }
+  }
 
   return pose;
 }
