@@ -848,7 +848,7 @@ export default function Home() {
       <GestureToast action={gestureToast} seq={gestureToastSeq} />
 
       {/* Header — Neon Marquee */}
-      <header className="flex-shrink-0 px-3 sm:px-6 py-2 sm:py-3 flex flex-wrap md:flex-nowrap items-center justify-between gap-x-4 gap-y-2 relative z-20">
+      <header className="shrink-0 px-3 sm:px-6 py-2 sm:py-3 flex flex-wrap md:flex-nowrap items-center justify-between gap-x-4 gap-y-2 relative z-20">
         <div className="flex items-center gap-3 sm:gap-4">
           <h1
             className="text-lg sm:text-xl tracking-[0.2em] uppercase neon-title animate-flicker"
@@ -865,7 +865,7 @@ export default function Home() {
           </span>
         </div>
 
-        <div className="order-last md:order-none basis-full md:basis-auto md:flex-1 w-full max-w-xl mx-auto md:mx-8 flex flex-col gap-1.5">
+        <div className="order-last md:order-0 basis-full md:basis-auto md:flex-1 w-full max-w-xl mx-auto md:mx-8 flex flex-col gap-1.5">
           <div className="flex flex-wrap gap-1 justify-center">
             <button
               onClick={() => setInputMode("url")}
@@ -929,7 +929,7 @@ export default function Home() {
       </header>
 
       {/* Neon Divider */}
-      <div className="flex-shrink-0 neon-divider relative z-10" />
+      <div className="shrink-0 neon-divider relative z-10" />
 
       {/* Mode activation overlay */}
       <ModeOverlay mode={mode} seq={modeOverlaySeq} />
@@ -966,7 +966,7 @@ export default function Home() {
         <main className="flex flex-col sm:flex-row gap-2 sm:gap-3 p-2 sm:p-3 relative z-10 fit:flex-1 fit:min-h-0">
             {/* Left — Reference Video */}
             <div className="w-full sm:w-auto sm:flex-1 min-w-0 fit:min-h-0 flex flex-col gap-2">
-              <div className="relative w-full aspect-video sm:aspect-[4/3] fit:aspect-auto fit:flex-1 fit:min-h-0">
+              <div className="relative w-full aspect-video sm:aspect-4/3 fit:aspect-auto fit:flex-1 fit:min-h-0">
               <YoutubePanel
                 ref={youtubePanelRef}
                 videoId={videoId}
@@ -1005,7 +1005,7 @@ export default function Home() {
                     }}
                   />
                   <span
-                    className="text-[11px] text-neon-cyan/70 font-mono min-w-[40px] text-right"
+                    className="text-[11px] text-neon-cyan/70 font-mono min-w-10 text-right"
                     style={{ fontFamily: "var(--font-audiowide)" }}
                   >
                     {playbackRate.toFixed(2)}x
@@ -1015,7 +1015,7 @@ export default function Home() {
             </div>
 
             {/* Right — Live Camera with score-reactive glow */}
-            <div className={`w-full sm:w-auto sm:flex-1 min-w-0 relative aspect-[4/3] fit:aspect-auto transition-all duration-700 ${getCameraGlow()}`}>
+            <div className={`w-full sm:w-auto sm:flex-1 min-w-0 relative aspect-4/3 fit:aspect-auto transition-all duration-700 ${getCameraGlow()}`}>
               <GestureProgressBar progress={gestureProgress} pending={gesturePending} />
 
               {/* Total Points Counter */}
@@ -1043,7 +1043,7 @@ export default function Home() {
 
               {/* Combo Streak Flash */}
               {comboFlash && (
-                <div className="absolute inset-0 pointer-events-none z-[55] flex items-center justify-center">
+                <div className="absolute inset-0 pointer-events-none z-55 flex items-center justify-center">
                   <div className="combo-flash-overlay">
                     <div
                       className="combo-flash-text"
@@ -1070,7 +1070,7 @@ export default function Home() {
 
           {/* Move Queue Strip */}
           {poseTimeline && poseTimeline.length > 0 && (
-            <div className="flex-shrink-0 px-2 sm:px-3 relative z-10">
+            <div className="shrink-0 px-2 sm:px-3 relative z-10">
               <MoveQueue
                 timeline={poseTimeline}
                 currentTime={currentVideoTime}
@@ -1084,7 +1084,7 @@ export default function Home() {
           )}
 
           {/* Coach Panel */}
-          <footer className="flex-shrink-0 px-2 sm:px-3 pb-16 sm:pb-3 relative z-10">
+          <footer className="shrink-0 px-2 sm:px-3 pb-16 sm:pb-3 relative z-10">
             <CoachPanel score={score} message={coachMsg} showScore={poseTimeline !== null} mode={mode} />
           </footer>
 

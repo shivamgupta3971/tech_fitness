@@ -206,7 +206,7 @@ function DietProfileDialog({
         {/* Step Indicator */}
         <div className="w-full h-1 bg-white/10 rounded-full mb-6 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-neon-cyan via-neon-magenta to-neon-violet transition-all duration-300"
+            className="h-full bg-linear-to-r from-neon-cyan via-neon-magenta to-neon-violet transition-all duration-300"
             style={{ width: `${(step / totalSteps) * 100}%` }}
           />
         </div>
@@ -468,7 +468,7 @@ function DietProfileDialog({
               <button
                 type="submit"
                 disabled={hasSafetyNotice}
-                className="px-6 py-2.5 bg-gradient-to-r from-neon-cyan to-neon-magenta text-black font-bold rounded text-xs tracking-[0.2em] uppercase hover:opacity-90 transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-linear-to-r from-neon-cyan to-neon-magenta text-black font-bold rounded text-xs tracking-[0.2em] uppercase hover:opacity-90 transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ fontFamily: "var(--font-audiowide)" }}
               >
                 GENERATE DIET PLAN ✨

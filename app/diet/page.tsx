@@ -246,7 +246,7 @@ export default function DietPage() {
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-neon-cyan to-neon-magenta text-black font-bold text-xs tracking-[0.2em] uppercase hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)]"
+            className="px-6 py-3 rounded-full bg-linear-to-r from-neon-cyan to-neon-magenta text-black font-bold text-xs tracking-[0.2em] uppercase hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)]"
             style={{ fontFamily: "var(--font-audiowide)" }}
           >
             CREATE YOUR AI DIET PLAN ✨
@@ -334,7 +334,7 @@ export default function DietPage() {
                       role="tab"
                       aria-selected={isSelected}
                       onClick={() => setSelectedDay(idx)}
-                      className={`px-4 py-2 rounded-xl border text-xs tracking-wider uppercase transition-all whitespace-nowrap flex flex-col items-center min-w-[75px] ${
+                      className={`px-4 py-2 rounded-xl border text-xs tracking-wider uppercase transition-all whitespace-nowrap flex flex-col items-center min-w-18.75 ${
                         isSelected
                           ? "border-neon-cyan bg-neon-cyan/20 text-neon-cyan font-bold shadow-[0_0_15px_rgba(0,255,255,0.25)]"
                           : "border-white/10 bg-black/40 text-white/60 hover:border-white/20 hover:text-white"

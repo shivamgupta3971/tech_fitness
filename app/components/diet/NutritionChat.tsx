@@ -80,7 +80,7 @@ export default function NutritionChat({ profile, activeDayPlan, targetCalories }
         type="button"
         onClick={() => setIsOpen((o) => !o)}
         aria-expanded={isOpen}
-        className="fixed bottom-6 right-6 z-40 px-4 py-3 bg-gradient-to-r from-neon-cyan to-neon-magenta text-black font-bold rounded-full shadow-[0_0_25px_rgba(0,255,255,0.4)] hover:scale-105 transition-all flex items-center gap-2 text-xs uppercase tracking-wider"
+        className="fixed bottom-6 right-6 z-40 px-4 py-3 bg-linear-to-r from-neon-cyan to-neon-magenta text-black font-bold rounded-full shadow-[0_0_25px_rgba(0,255,255,0.4)] hover:scale-105 transition-all flex items-center gap-2 text-xs uppercase tracking-wider"
         style={{ fontFamily: "var(--font-audiowide)" }}
       >
         <span aria-hidden="true">💬</span>
@@ -92,7 +92,7 @@ export default function NutritionChat({ profile, activeDayPlan, targetCalories }
         <div
           role="dialog"
           aria-label="AI Dietitian Assistant"
-          className="fixed bottom-20 right-6 z-50 w-96 max-w-[90vw] h-[500px] max-h-[70dvh] bg-[#080814] border border-neon-cyan/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl"
+          className="fixed bottom-20 right-6 z-50 w-96 max-w-[90vw] h-125 max-h-[70dvh] bg-[#080814] border border-neon-cyan/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl"
         >
           {/* Header */}
           <div className="p-3 bg-black/60 border-b border-neon-cyan/20 flex items-center justify-between">

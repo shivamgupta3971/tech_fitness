@@ -74,7 +74,7 @@ export default function ProfilePage() {
             <span>👤</span> User Identity
           </h2>
           <form onSubmit={handleSaveUsername} className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[200px]">
+            <div className="flex-1 min-w-50">
               <label className="block text-[10px] text-white/50 uppercase tracking-wider mb-1">
                 Display Name / Athlete Handle
               </label>

@@ -26,10 +26,10 @@ export default function AppNavigation() {
   return (
     <nav
       aria-label="Primary"
-      className="w-full h-[var(--nav-h)] flex-shrink-0 bg-black/80 border-b border-neon-cyan/15 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between gap-2 relative z-40"
+      className="w-full h-(--nav-h) shrink-0 bg-black/80 border-b border-neon-cyan/15 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between gap-2 relative z-40"
     >
       {/* Brand */}
-      <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
+      <Link href="/" className="flex items-center gap-2 group shrink-0">
         <span
           className="text-base sm:text-lg font-bold tracking-[0.2em] uppercase neon-title group-hover:drop-shadow-[0_0_8px_#ff00aa] transition-all"
           style={{ fontFamily: "var(--font-audiowide)" }}
@@ -66,7 +66,7 @@ export default function AppNavigation() {
       </div>
 
       {/* Account / User info */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {username ? (
           <Link
             href="/profile"
@@ -75,7 +75,7 @@ export default function AppNavigation() {
             style={{ fontFamily: "var(--font-audiowide)" }}
           >
             <span aria-hidden="true">👤</span>
-            <span className="hidden sm:inline max-w-[8rem] truncate">{username}</span>
+            <span className="hidden sm:inline max-w-32 truncate">{username}</span>
           </Link>
         ) : (
           <Link

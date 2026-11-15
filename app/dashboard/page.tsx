@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
           <Link
             href="/"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-neon-cyan via-neon-magenta to-neon-violet text-black font-bold text-xs tracking-[0.2em] uppercase hover:opacity-90 transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)] flex items-center gap-2"
+            className="px-5 py-2.5 rounded-xl bg-linear-to-r from-neon-cyan via-neon-magenta to-neon-violet text-black font-bold text-xs tracking-[0.2em] uppercase hover:opacity-90 transition-all shadow-[0_0_20px_rgba(0,255,255,0.4)] flex items-center gap-2"
             style={{ fontFamily: "var(--font-audiowide)" }}
           >
             <span aria-hidden="true">📹</span> START LIVE ARENA
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="font-semibold text-white mt-0.5 truncate">{meal.name}</div>
                           </div>
-                          <div className="text-right font-mono flex-shrink-0">
+                          <div className="text-right font-mono shrink-0">
                             <div className="text-neon-cyan font-bold">{meal.nutrition.calories} kcal</div>
                             <div className="text-[10px] text-white/50">{meal.nutrition.proteinG}g P</div>
                           </div>
@@ -339,13 +339,13 @@ export default function DashboardPage() {
                         {ex.trackable ? (
                           <Link
                             href={arenaLink(ex, todayWorkout.id)}
-                            className="px-2.5 py-1 rounded bg-neon-cyan/20 border border-neon-cyan text-neon-cyan font-bold text-[10px] tracking-wider uppercase hover:bg-neon-cyan/35 flex-shrink-0"
+                            className="px-2.5 py-1 rounded bg-neon-cyan/20 border border-neon-cyan text-neon-cyan font-bold text-[10px] tracking-wider uppercase hover:bg-neon-cyan/35 shrink-0"
                             style={{ fontFamily: "var(--font-audiowide)" }}
                           >
                             TRACK →
                           </Link>
                         ) : (
-                          <span className="text-[10px] text-white/40 flex-shrink-0">Self-guided</span>
+                          <span className="text-[10px] text-white/40 shrink-0">Self-guided</span>
                         )}
                       </div>
                     ))}
