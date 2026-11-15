@@ -358,6 +358,22 @@ export function getNutritionLogsForDate(date: string): NutritionLog[] {
   return getNutritionLogs().filter((l) => l.date === date);
 }
 
+// ─── Grocery checklist ────────────────────────────────────────────────────────
+
+/** Storage key for the ticked-off grocery items of one plan (so ticks survive tab switches and reloads). */
+export function groceryCheckedKey(planId: string): string {
+  return `fitveda:diet:groceryChecked:${planId}`;
+}
+
+export function parseGroceryChecked(raw: string | null): string[] {
+  const v = parseJson(raw);
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+}
+
+export function setGroceryChecked(planId: string, checkedNames: string[]): void {
+  safeSet(groceryCheckedKey(planId), checkedNames);
+}
+
 // ─── Exercise Plan ────────────────────────────────────────────────────────────
 
 export function getWeeklyExercisePlan(): WeeklyExercisePlan | null {

@@ -1,39 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  getPreferences,
-  savePreferences,
+  updatePreferences,
   exportAllData,
   clearWeeklyDietPlan,
   clearWeeklyExercisePlan,
 } from "../lib/storage";
-import type { AppPreferences } from "../lib/storage";
-import type { MacroTargets } from "../lib/nutrition";
 import { computeMacroTargets } from "../lib/nutrition";
+import { toLocalDateString } from "../lib/dates";
+import { usePreferences } from "../lib/useAppData";
 
 export default function ProfilePage() {
-  const [prefs, setPrefs] = useState<AppPreferences>({});
-  const [usernameInput, setUsernameInput] = useState("");
-  const [targets, setTargets] = useState<MacroTargets | null>(null);
-  const [copied, setCopied] = useState(false);
+  const prefs = usePreferences();
+  // null = "not edited yet": show the saved name without copying it into state in an effect.
+  const [editedName, setEditedName] = useState<string | null>(null);
+  const usernameInput = editedName ?? prefs.username ?? "";
+  const targets = useMemo(() => (prefs.dietProfile ? computeMacroTargets(prefs.dietProfile) : null), [prefs.dietProfile]);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
-  useEffect(() => {
-    const current = getPreferences();
-    setPrefs(current);
-    if (current.username) setUsernameInput(current.username);
-    if (current.dietProfile) {
-      setTargets(computeMacroTargets(current.dietProfile));
-    }
-  }, []);
 
   const handleSaveUsername = (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = { ...prefs, username: usernameInput.trim() };
-    savePreferences(updated);
-    setPrefs(updated);
+    updatePreferences({ username: usernameInput.trim() });
+    setEditedName(null);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
   };
@@ -44,7 +34,7 @@ export default function ProfilePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `fitveda_profile_export_${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `fitveda_profile_export_${toLocalDateString()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -91,7 +81,7 @@ export default function ProfilePage() {
               <input
                 type="text"
                 value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
+                onChange={(e) => setEditedName(e.target.value)}
                 placeholder="e.g. shiva"
                 className="w-full bg-black/60 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-neon-cyan"
               />
@@ -205,9 +195,11 @@ export default function ProfilePage() {
               <div className="p-3 rounded-xl bg-white/5 border border-white/5">
                 <div className="text-[10px] text-white/40 uppercase">Avoided Movements</div>
                 <div className="font-semibold text-amber-400 capitalize mt-1">
-                  {prefs.exercisePrefs.avoidList.length
-                    ? prefs.exercisePrefs.avoidList.join(", ")
-                    : "None"}
+                  {(() => {
+                    // Limitations and the avoid list are one list to the planner; older saves split them.
+                    const all = Array.from(new Set([...prefs.exercisePrefs.limitations, ...prefs.exercisePrefs.avoidList]));
+                    return all.length ? all.join(", ") : "None";
+                  })()}
                 </div>
               </div>
             </div>
@@ -227,7 +219,7 @@ export default function ProfilePage() {
             <span>💾</span> Privacy & Data Portability
           </h2>
           <p className="text-xs text-white/60 mb-6 leading-relaxed">
-            All biometrics, diet schedules, and workout logs are saved client-side in your browser's private storage. Zero video or private profile data is transmitted or stored on remote databases.
+            Your plans, meal logs and preferences are saved in this browser only (not in an account database). When you generate a plan, the details it needs (such as age, diet, allergies and equipment) are sent to the server and to the configured AI provider, and not stored there by FitVeda.
           </p>
 
           <div className="flex flex-wrap items-center gap-4">

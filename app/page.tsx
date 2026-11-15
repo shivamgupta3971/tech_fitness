@@ -50,6 +50,9 @@ import ModeOverlay from "./components/ModeOverlay";
 import ReportCard from "./components/report/ReportCard";
 import type { AIReport } from "./components/report/types";
 import SummaryReadyNotification from "./components/SummaryReadyNotification";
+import WorkoutTargetBanner from "./components/WorkoutTargetBanner";
+import type { WorkoutTarget } from "./components/WorkoutTargetBanner";
+import { getExerciseById } from "./data/exercises";
 import {
   resetSessionStats,
   recordScoreSample,
@@ -150,6 +153,7 @@ export default function Home() {
   const [scorePopupPoints, setScorePopupPoints] = useState(0);
   const [comboFlash, setComboFlash] = useState<number | null>(null);
   const [pointsBumpSeq, setPointsBumpSeq] = useState(0);
+  const [workoutTarget, setWorkoutTarget] = useState<WorkoutTarget | null>(null);
 
   const youtubePanelRef = useRef<YoutubePanelHandle>(null);
   const webcamCaptureRef = useRef<(() => string | null) | null>(null);
@@ -391,7 +395,12 @@ export default function Home() {
   }, []);
 
   // Read ?url=, ?mode=, and ?exercise= query param on mount
+  const queryHandledRef = useRef(false);
   useEffect(() => {
+    // handleUrl's identity changes with the download state, which re-runs this effect mid-download. Unguarded,
+    // that fired a second download request and let ?mode= overwrite the classifier's result. Read the query once.
+    if (queryHandledRef.current) return;
+    queryHandledRef.current = true;
     const params = new URLSearchParams(window.location.search);
     const urlParam = params.get("url");
     if (urlParam) {
@@ -402,8 +411,14 @@ export default function Home() {
       setMode(modeParam);
     }
     const exerciseParam = params.get("exercise");
-    if (exerciseParam && !urlParam) {
-      setVideoTitle(`Target: ${exerciseParam.replace("ex_", "").replace(/_/g, " ").toUpperCase()}`);
+    const exercise = exerciseParam ? getExerciseById(exerciseParam) : undefined;
+    if (exercise) {
+      setWorkoutTarget({
+        catalogId: exercise.id,
+        sessionId: params.get("session") ?? undefined,
+        itemId: params.get("item") ?? undefined,
+      });
+      if (!urlParam) setVideoTitle(`Target: ${exercise.name}`);
     }
   }, [handleUrl]);
 
@@ -816,7 +831,7 @@ export default function Home() {
   return (
     <div
       data-mode={mode}
-      className={`min-h-dvh fit:h-dvh overflow-x-hidden fit:overflow-hidden ${mode === "gym" ? "gym-arena" : "arena"} text-white flex flex-col`}
+      className={`min-h-[calc(100dvh-var(--nav-h))] fit:h-[calc(100dvh-var(--nav-h))] overflow-x-hidden fit:overflow-hidden ${mode === "gym" ? "gym-arena" : "arena"} text-white flex flex-col`}
       style={{ fontFamily: "var(--font-chakra-petch, system-ui)" }}
     >
       {/* Floating ambient light orbs */}
@@ -918,6 +933,11 @@ export default function Home() {
 
       {/* Mode activation overlay */}
       <ModeOverlay mode={mode} seq={modeOverlaySeq} />
+
+      {/* Opened from a workout plan: show the target and let the user tick it off */}
+      {workoutTarget && (
+        <WorkoutTargetBanner target={workoutTarget} onDismiss={() => setWorkoutTarget(null)} />
+      )}
 
       {/* Live Class tab (Zoom call / window capture) — replaces the YouTube arena so only one webcam/pose engine runs */}
       {inputMode === "zoom" && <ZoomMode />}

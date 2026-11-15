@@ -62,6 +62,20 @@ Webcam → MediaPipe Pose (self-hosted from /public, on-device) → skeleton ove
 
 Manifest v3 extension in `/extension/`. Sends the current YouTube tab URL to `http://localhost:3000?url=...`. The web app reads the `?url=` query param on mount.
 
+### Planners (Diet, Exercise, Dashboard)
+
+The LLM only *suggests*; code decides what ships. Plans live in localStorage (no database).
+
+- **Diet** — `api/diet/plan` asks the LLM for **one day at a time** (7 small parallel calls, `json: true`; a single big call truncated at the token limit and produced malformed JSON, so every plan silently fell back). Each day is zod-checked (`planValidator.ts`), then safety-checked in `dietPlanner.ts` (`findDayViolation` → `nutrition.ts` allergen/diet matcher). A day that fails is replaced by one from the built-in meal bank, which is itself allergy-filtered. Nutrition comes from `nutrition.json` via `nutritionLookup.ts`, then portions are scaled so each day hits the calorie target (`buildDayForTarget`).
+- **Allergen matching** is whole-word on purpose (`egg` must not match eggplant, `til` not lentil); compound words (buttermilk, raita…) are listed explicitly. Add new keywords to `ALLERGEN_KEYWORDS` and a test in `allergens.test.ts`.
+- **Exercise** — `exercisePlanner.ts` builds the week deterministically from goal / level / duration / equipment / limitations; an LLM suggestion is accepted only after it is cleaned against the same rules (`buildWeek({ llmDays })`). The catalog is `app/data/exercises.ts`; exercises carry `stress` tags (knee, back, shoulder…) matched against free-text limitations. Only exercises the pose engine can score may set `trackable: true`.
+- **Adaptive tweaks** (`adaptive.ts`) are pure: `suggestAdjustment` describes a change, `applyAdjustment` returns the new plan.
+- **State** — read via the hooks in `lib/useAppData.ts` (`useSyncExternalStore` over localStorage); write via `lib/storage.ts`, which validates shapes on read and emits `STORAGE_EVENT` so every page updates. Don't copy storage into component state in an effect.
+- **Dates** — always local dates via `lib/dates.ts` (`toLocalDateString`); never `toISOString().split("T")`, which is the UTC date. Clients send `startDate` so server plans start on the user's "today".
+- **Arena hand-off** — `lib/arenaLink.ts` builds `/?mode=&exercise=&session=&item=`; the Arena shows `WorkoutTargetBanner` so the exercise can be ticked off there.
+- **Layout** — the global nav has a fixed height (`--nav-h` in `globals.css`) and the Arena sizes itself to `100dvh - var(--nav-h)`. Keep the nav to one row.
+- **Privacy note** — pose detection is on-device, but during a session with a reference video, webcam + video frames are sent to `/api/score` (Groq vision) and pose summaries to the coach. Plan generation sends profile details to the LLM provider.
+
 ## Tech Stack
 
 - Next.js 16 (App Router), React 19, TypeScript

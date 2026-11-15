@@ -98,6 +98,7 @@ export function parseQuantityInGrams(quantityStr: string, foodNameHint?: string)
   for (const [glyph, replacement] of Object.entries(UNICODE_FRACTIONS)) {
     str = str.split(glyph).join(replacement);
   }
+  str = str.trim();
 
   const unit = (units: string) => str.match(new RegExp(`${NUM}\\s*(?:${units})\\b`));
   const clamp = (g: number) => Math.min(Math.max(g, 1), MAX_REASONABLE_GRAMS);
@@ -151,7 +152,7 @@ function normalize(text: string): string {
 function containsPhrase(text: string, phrase: string): boolean {
   if (!phrase) return false;
   const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?:^|[^a-z])${escaped}(?![a-z])`).test(text);
+  return new RegExp(`(?:^|[^a-z])${escaped}(?:e?s)?(?![a-z])`).test(text);
 }
 
 /**

@@ -20,6 +20,8 @@
   --neon-pink: #ff2d95;
   --panel-bg: rgba(8, 8, 20, 0.8);
   --panel-border: rgba(0, 255, 255, 0.12);
+  /* Height of the global nav bar; full-screen pages (the Arena) subtract it from the viewport. */
+  --nav-h: 3rem;
 }
 
 @theme inline {

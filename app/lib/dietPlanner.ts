@@ -276,10 +276,35 @@ export const FALLBACK_MEALS: RawMeal[] = [
   ], 500),
 ];
 
-/** Fallback meals for one slot that pass the user's allergy and diet checks. */
+/**
+ * Fallback meals for one slot that pass the user's allergy and diet checks. For non-vegetarians, meat/fish/egg
+ * dishes alternate with vegetarian ones so a week contains both.
+ */
 export function safeFallbackMeals(type: MealType, dietType: DietType, allergies: string[]): RawMeal[] {
-  return FALLBACK_MEALS.filter((m) => m.type === type && !findMealViolation(m, dietType, allergies));
+  const key = `${type}|${dietType}|${allergies.map((a) => a.trim().toLowerCase()).sort().join(",")}`;
+  const cached = safeMealCache.get(key);
+  if (cached) return cached;
+
+  const safe = FALLBACK_MEALS.filter((m) => m.type === type && !findMealViolation(m, dietType, allergies));
+  let result = safe;
+  if (dietType === "non_vegetarian") {
+    const isVegetarian = (m: RawMeal) => !findMealViolation(m, "vegetarian", []);
+    const veg = safe.filter(isVegetarian);
+    const nonVeg = safe.filter((m) => !isVegetarian(m));
+    result = [];
+    for (let i = 0; i < Math.max(veg.length, nonVeg.length); i++) {
+      if (nonVeg[i]) result.push(nonVeg[i]);
+      if (veg[i]) result.push(veg[i]);
+    }
+  }
+
+  if (safeMealCache.size >= 500) safeMealCache.clear();
+  safeMealCache.set(key, result);
+  return result;
 }
+
+/** Filtering the bank is pure but runs per slot per day; profiles repeat, so remember the answer. */
+const safeMealCache = new Map<string, RawMeal[]>();
 
 /**
  * One safe, varied day from the built-in bank. Different days pick different dishes (rotating through the

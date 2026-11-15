@@ -45,7 +45,24 @@ export function weekdayShort(dateStr: string, locale = "en-US"): string {
   return parseLocalDate(dateStr).toLocaleDateString(locale, { weekday: "short" });
 }
 
-/** Index of `today` within a list of YYYY-MM-DD dates, or -1 if it isn't part of the list. */
-export function indexOfDate(dates: string[], today: string): number {
-  return dates.indexOf(today);
+export type PlanWindow = "upcoming" | "active" | "ended";
+
+/** Where `today` falls relative to a plan's dates (ascending YYYY-MM-DD). An unknown "today" counts as active. */
+export function planWindow(dates: string[], today: string): PlanWindow {
+  if (!today || dates.length === 0) return "active";
+  if (today < dates[0]) return "upcoming";
+  if (today > dates[dates.length - 1]) return "ended";
+  return "active";
+}
+
+/** The day a plan view should open on: today, else the first day (not started) or the last (ended). */
+export function defaultDayIndex(dates: string[], today: string): number {
+  const exact = dates.indexOf(today);
+  if (exact !== -1) return exact;
+  return planWindow(dates, today) === "ended" ? Math.max(0, dates.length - 1) : 0;
+}
+
+/** Day-of-month number for chips ("5"). */
+export function dayOfMonth(dateStr: string): number {
+  return parseLocalDate(dateStr).getDate();
 }

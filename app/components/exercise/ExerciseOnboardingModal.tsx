@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type {
   ExercisePreferences,
   ExerciseGoal,
@@ -27,36 +27,35 @@ const EQUIPMENT_OPTIONS: { id: Equipment; label: string }[] = [
   { id: "full_gym", label: "Full Commercial Gym" },
 ];
 
-export default function ExerciseOnboardingModal({
-  initialPrefs,
-  isOpen,
-  onClose,
-  onSave,
-}: Props) {
+/** Mounts only while open, so the form always starts from the latest saved preferences (and step 1). */
+export default function ExerciseOnboardingModal({ initialPrefs, isOpen, onClose, onSave }: Props) {
+  if (!isOpen) return null;
+  return <ExercisePrefsDialog initialPrefs={initialPrefs} onClose={onClose} onSave={onSave} />;
+}
+
+function ExercisePrefsDialog({ initialPrefs, onClose, onSave }: Omit<Props, "isOpen">) {
+  const titleId = useId();
   const [step, setStep] = useState(1);
   const totalSteps = 3;
 
-  const [goal, setGoal] = useState<ExerciseGoal>(initialPrefs?.goal || "general_fitness");
-  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>(
-    initialPrefs?.experienceLevel || "beginner"
-  );
-  const [availableDays, setAvailableDays] = useState(
-    initialPrefs?.availableDaysPerWeek || 4
-  );
-  const [sessionDuration, setSessionDuration] = useState(
-    initialPrefs?.sessionDurationMinutes || 40
-  );
-  const [location, setLocation] = useState<WorkoutLocation>(
-    initialPrefs?.location || "home"
-  );
-  const [equipment, setEquipment] = useState<Equipment[]>(
-    initialPrefs?.equipment || ["none"]
-  );
+  const [goal, setGoal] = useState<ExerciseGoal>(initialPrefs?.goal ?? "general_fitness");
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>(initialPrefs?.experienceLevel ?? "beginner");
+  const [availableDays, setAvailableDays] = useState(initialPrefs?.availableDaysPerWeek ?? 4);
+  const [sessionDuration, setSessionDuration] = useState(initialPrefs?.sessionDurationMinutes ?? 40);
+  const [location, setLocation] = useState<WorkoutLocation>(initialPrefs?.location ?? "home");
+  const [equipment, setEquipment] = useState<Equipment[]>(initialPrefs?.equipment ?? ["none"]);
+  // Older saves kept the same text in both lists; show it once.
   const [limitationsInput, setLimitationsInput] = useState(
-    initialPrefs?.limitations?.join(", ") || ""
+    Array.from(new Set([...(initialPrefs?.limitations ?? []), ...(initialPrefs?.avoidList ?? [])])).join(", ")
   );
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const toggleEquipment = (eq: Equipment) => {
     if (eq === "none") {
@@ -65,14 +64,16 @@ export default function ExerciseOnboardingModal({
     }
     setEquipment((prev) => {
       const filtered = prev.filter((e) => e !== "none");
-      return filtered.includes(eq)
-        ? filtered.filter((e) => e !== eq)
-        : [...filtered, eq];
+      return filtered.includes(eq) ? filtered.filter((e) => e !== eq) : [...filtered, eq];
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (step < totalSteps) {
+      setStep((s) => s + 1);
+      return;
+    }
     const limitations = limitationsInput
       .split(",")
       .map((s) => s.trim())
@@ -86,14 +87,20 @@ export default function ExerciseOnboardingModal({
       location,
       equipment: equipment.length ? equipment : ["none"],
       preferredActivities: ["gym", "dance", "mobility"],
+      // One list: the planner treats limitations and the avoid list identically.
       limitations,
-      avoidList: limitations,
+      avoidList: [],
     });
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-[#080814] border border-neon-cyan/30 rounded-2xl p-6 sm:p-8 shadow-[0_0_40px_rgba(0,255,255,0.15)] text-white">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative w-full max-w-xl bg-[#080814] border border-neon-cyan/30 rounded-2xl p-6 sm:p-8 shadow-[0_0_40px_rgba(0,255,255,0.15)] text-white"
+      >
         {/* Glow corners */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-neon-cyan/70" />
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-neon-cyan/70" />
@@ -103,6 +110,7 @@ export default function ExerciseOnboardingModal({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2
+              id={titleId}
               className="text-lg sm:text-xl font-bold tracking-[0.18em] uppercase neon-title"
               style={{ fontFamily: "var(--font-audiowide)" }}
             >
@@ -113,7 +121,9 @@ export default function ExerciseOnboardingModal({
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close"
             className="text-white/40 hover:text-white text-lg p-1 transition-colors"
           >
             ✕
@@ -132,10 +142,8 @@ export default function ExerciseOnboardingModal({
           {/* STEP 1: Goal & Experience */}
           {step === 1 && (
             <div className="flex flex-col gap-4">
-              <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">
-                  Training Goal
-                </label>
+              <fieldset>
+                <legend className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">Training Goal</legend>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { id: "strength", label: "Strength & Power" },
@@ -148,6 +156,7 @@ export default function ExerciseOnboardingModal({
                     <button
                       key={g.id}
                       type="button"
+                      aria-pressed={goal === g.id}
                       onClick={() => setGoal(g.id as ExerciseGoal)}
                       className={`p-2.5 rounded border text-left text-xs transition-all ${
                         goal === g.id
@@ -159,12 +168,10 @@ export default function ExerciseOnboardingModal({
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
-              <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">
-                  Experience Level
-                </label>
+              <fieldset>
+                <legend className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">Experience Level</legend>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: "beginner", label: "Beginner (<6 mos)" },
@@ -174,6 +181,7 @@ export default function ExerciseOnboardingModal({
                     <button
                       key={exp.id}
                       type="button"
+                      aria-pressed={experienceLevel === exp.id}
                       onClick={() => setExperienceLevel(exp.id as ExperienceLevel)}
                       className={`p-2 rounded border text-center text-xs transition-all ${
                         experienceLevel === exp.id
@@ -185,7 +193,7 @@ export default function ExerciseOnboardingModal({
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
             </div>
           )}
 
@@ -193,11 +201,11 @@ export default function ExerciseOnboardingModal({
           {step === 2 && (
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-1">
-                  Available Days Per Week:{" "}
-                  <span className="text-neon-cyan font-bold">{availableDays} Days</span>
+                <label htmlFor={`${titleId}-days`} className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-1">
+                  Training Days Per Week: <span className="text-neon-cyan font-bold">{availableDays} Days</span>
                 </label>
                 <input
+                  id={`${titleId}-days`}
                   type="range"
                   min="2"
                   max="6"
@@ -213,11 +221,11 @@ export default function ExerciseOnboardingModal({
               </div>
 
               <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-1">
-                  Target Session Length:{" "}
-                  <span className="text-neon-magenta font-bold">{sessionDuration} Mins</span>
+                <label htmlFor={`${titleId}-mins`} className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-1">
+                  Target Session Length: <span className="text-neon-magenta font-bold">{sessionDuration} Mins</span>
                 </label>
                 <input
+                  id={`${titleId}-mins`}
                   type="range"
                   min="20"
                   max="75"
@@ -233,10 +241,8 @@ export default function ExerciseOnboardingModal({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">
-                  Workout Location
-                </label>
+              <fieldset>
+                <legend className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">Workout Location</legend>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: "home", label: "🏠 Home" },
@@ -246,6 +252,7 @@ export default function ExerciseOnboardingModal({
                     <button
                       key={loc.id}
                       type="button"
+                      aria-pressed={location === loc.id}
                       onClick={() => setLocation(loc.id as WorkoutLocation)}
                       className={`p-2 rounded border text-center text-xs transition-all ${
                         location === loc.id
@@ -257,17 +264,17 @@ export default function ExerciseOnboardingModal({
                     </button>
                   ))}
                 </div>
-              </div>
+              </fieldset>
             </div>
           )}
 
           {/* STEP 3: Equipment & Limitations */}
           {step === 3 && (
             <div className="flex flex-col gap-4">
-              <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">
+              <fieldset>
+                <legend className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-2">
                   Equipment You Have Access To
-                </label>
+                </legend>
                 <div className="grid grid-cols-2 gap-2">
                   {EQUIPMENT_OPTIONS.map((opt) => {
                     const isSelected = equipment.includes(opt.id);
@@ -275,6 +282,7 @@ export default function ExerciseOnboardingModal({
                       <button
                         key={opt.id}
                         type="button"
+                        aria-pressed={isSelected}
                         onClick={() => toggleEquipment(opt.id)}
                         className={`p-2 rounded border text-left text-xs transition-all flex items-center justify-between ${
                           isSelected
@@ -283,26 +291,29 @@ export default function ExerciseOnboardingModal({
                         }`}
                       >
                         <span>{opt.label}</span>
-                        {isSelected && <span>✓</span>}
+                        {isSelected && <span aria-hidden="true">✓</span>}
                       </button>
                     );
                   })}
                 </div>
-              </div>
+              </fieldset>
 
               <div>
-                <label className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-1">
+                <label htmlFor={`${titleId}-limits`} className="block text-[10px] tracking-wider uppercase text-neon-cyan/70 mb-1">
                   Limitations / Avoided Movements (Optional)
                 </label>
                 <input
+                  id={`${titleId}-limits`}
                   type="text"
-                  placeholder="e.g. knee pain, avoid overhead press, lower back"
+                  placeholder="e.g. knee pain, no overhead press, lower back"
                   value={limitationsInput}
                   onChange={(e) => setLimitationsInput(e.target.value)}
+                  maxLength={200}
                   className="w-full bg-black/60 border border-white/20 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-neon-cyan"
                 />
                 <p className="text-[10px] text-white/40 mt-1">
-                  Comma-separated. The engine will filter out incompatible catalog exercises.
+                  Comma-separated. Body areas (knee, back, shoulder, wrist, ankle, hip, neck, elbow), &quot;jumping&quot; or
+                  &quot;overhead&quot;, and movement names (squats, push-ups) are all filtered out of your plan.
                 </p>
               </div>
             </div>
@@ -324,8 +335,7 @@ export default function ExerciseOnboardingModal({
 
             {step < totalSteps ? (
               <button
-                type="button"
-                onClick={() => setStep((s) => s + 1)}
+                type="submit"
                 className="px-5 py-2.5 bg-neon-cyan/20 border border-neon-cyan text-neon-cyan rounded text-xs tracking-[0.2em] uppercase font-semibold hover:bg-neon-cyan/30 transition-all shadow-[0_0_15px_rgba(0,255,255,0.2)]"
                 style={{ fontFamily: "var(--font-audiowide)" }}
               >

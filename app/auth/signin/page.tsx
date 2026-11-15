@@ -45,7 +45,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen arena flex flex-col items-center justify-center p-4 text-white relative">
+    <div className="min-h-[calc(100dvh-var(--nav-h))] arena flex flex-col items-center justify-center p-4 text-white relative">
       <div className="w-full max-w-md bg-black/70 border border-neon-cyan/20 rounded-xl p-8 backdrop-blur-md relative z-10 shadow-[0_0_30px_rgba(0,255,255,0.15)]">
         {/* Glow corners */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-neon-cyan/60" />

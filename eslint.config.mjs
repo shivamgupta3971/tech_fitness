@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored, minified MediaPipe/Zoom assets and the separate Chrome extension: not code we lint.
+    "public/**",
+    "extension/**",
   ]),
 ]);
 

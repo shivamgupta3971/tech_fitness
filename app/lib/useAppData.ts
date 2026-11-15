@@ -13,6 +13,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import {
   STORAGE_EVENT,
   STORAGE_KEYS,
+  groceryCheckedKey,
+  parseGroceryChecked,
   parseNutritionLogs,
   parsePreferences,
   parseWeeklyDietPlan,
@@ -63,6 +65,12 @@ export function useNutritionLogs(): NutritionLog[] {
 export function useWeeklyExercisePlan(): WeeklyExercisePlan | null {
   const raw = useRaw(STORAGE_KEYS.WEEKLY_EXERCISE_PLAN);
   return useMemo(() => parseWeeklyExercisePlan(raw), [raw]);
+}
+
+/** Names of grocery items the user has ticked off for a plan. */
+export function useGroceryChecked(planId: string): Set<string> {
+  const raw = useRaw(groceryCheckedKey(planId));
+  return useMemo(() => new Set(parseGroceryChecked(raw)), [raw]);
 }
 
 const noopSubscribe = () => () => {};
