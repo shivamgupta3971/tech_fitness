@@ -3,20 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { PlannedExercise } from "../../lib/storage";
+import { arenaLink } from "../../lib/arenaLink";
 
 interface Props {
   exercise: PlannedExercise;
+  /** Needed to deep-link into the Arena so the exercise can be ticked off from there. */
+  sessionId: string;
   onStatusChange?: (status: PlannedExercise["status"], notes?: string) => void;
 }
 
-export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
+export default function ExerciseItemCard({ exercise, sessionId, onStatusChange }: Props) {
   const [showInstructions, setShowInstructions] = useState(false);
   const [showModNotes, setShowModNotes] = useState(false);
-  const [modNote, setModNote] = useState(exercise.notes || "");
+  // Only a note the user wrote for a "modified" exercise belongs in the box; planner notes are shown separately.
+  const [modNote, setModNote] = useState(exercise.status === "modified" ? exercise.notes ?? "" : "");
 
   const isCompleted = exercise.status === "completed";
   const isSkipped = exercise.status === "skipped";
   const isModified = exercise.status === "modified";
+  const isPending = exercise.status === "pending";
 
   return (
     <div
@@ -44,13 +49,12 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
           </div>
         </div>
 
-        {/* Honest Tracking Badge */}
         {exercise.trackable ? (
           <span
             className="text-[9px] font-bold tracking-[0.18em] uppercase px-2.5 py-1 rounded bg-neon-cyan/20 border border-neon-cyan/60 text-neon-cyan shadow-[0_0_10px_rgba(0,255,255,0.3)] flex items-center gap-1.5"
             style={{ fontFamily: "var(--font-audiowide)" }}
           >
-            <span>🎯</span> AI TRACKABLE
+            <span aria-hidden="true">🎯</span> AI TRACKABLE
           </span>
         ) : (
           <span className="text-[9px] tracking-wider uppercase px-2 py-0.5 rounded bg-white/5 border border-white/10 text-white/40">
@@ -59,24 +63,30 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
         )}
       </div>
 
-      {/* Target Volume (Sets / Reps / Duration) */}
-      <div className="flex items-center gap-3 text-xs font-mono my-2 text-white/80">
-        {exercise.sets && (
+      {/* Target Volume (Sets / Reps / Duration / Rest) */}
+      <div className="flex flex-wrap items-center gap-2 text-xs font-mono my-2 text-white/80">
+        {!!exercise.sets && (
           <div className="bg-white/5 px-2 py-1 rounded border border-white/5">
             <span className="text-white/40 text-[9px]">SETS: </span>
             <span className="font-bold text-neon-cyan">{exercise.sets}</span>
           </div>
         )}
-        {exercise.reps && (
+        {!!exercise.reps && (
           <div className="bg-white/5 px-2 py-1 rounded border border-white/5">
             <span className="text-white/40 text-[9px]">REPS: </span>
             <span className="font-bold text-neon-magenta">{exercise.reps}</span>
           </div>
         )}
-        {exercise.durationSeconds && (
+        {!!exercise.durationSeconds && (
           <div className="bg-white/5 px-2 py-1 rounded border border-white/5">
             <span className="text-white/40 text-[9px]">TIME: </span>
-            <span className="font-bold text-neon-yellow">{exercise.durationSeconds}s</span>
+            <span className="font-bold text-neon-yellow">{formatDuration(exercise.durationSeconds)}</span>
+          </div>
+        )}
+        {!!exercise.restSeconds && (
+          <div className="bg-white/5 px-2 py-1 rounded border border-white/5">
+            <span className="text-white/40 text-[9px]">REST: </span>
+            <span className="font-bold text-white/70">{exercise.restSeconds}s</span>
           </div>
         )}
         <div className="bg-white/5 px-2 py-1 rounded border border-white/5 text-[10px] text-white/50 capitalize">
@@ -84,10 +94,22 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
         </div>
       </div>
 
+      {/* Planner / adaptive note (e.g. "Eased after a skip") */}
+      {exercise.notes && !isModified && (
+        <div className="text-[10px] text-neon-cyan/70 mb-2 flex items-start gap-1">
+          <span aria-hidden="true">📝</span> <span>{exercise.notes}</span>
+        </div>
+      )}
+      {isModified && exercise.notes && (
+        <div className="text-[10px] text-amber-300/80 mb-2 flex items-start gap-1">
+          <span aria-hidden="true">✏️</span> <span>{exercise.notes}</span>
+        </div>
+      )}
+
       {/* Beginner Alternative If Present */}
       {exercise.beginnerAlternative && (
         <div className="text-[10px] text-amber-300/80 mb-2 flex items-center gap-1">
-          <span>💡</span> Easy alternative: {exercise.beginnerAlternative}
+          <span aria-hidden="true">💡</span> Easy alternative: {exercise.beginnerAlternative}
         </div>
       )}
 
@@ -95,7 +117,9 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
       {exercise.instructions && exercise.instructions.length > 0 && (
         <div className="my-2">
           <button
+            type="button"
             onClick={() => setShowInstructions((s) => !s)}
+            aria-expanded={showInstructions}
             className="text-[10px] uppercase tracking-wider text-neon-cyan/70 hover:text-neon-cyan transition-colors"
           >
             {showInstructions ? "▼ Hide Form Cues" : "▶ View Form Cues"}
@@ -112,25 +136,23 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
 
       {/* Bottom Action Row */}
       <div className="pt-3 mt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
-        {/* Arena Integration Link for Trackable Movements */}
         {exercise.trackable ? (
           <Link
-            href={`/?mode=${exercise.trackingMode === "dance" ? "dance" : "gym"}&exercise=${exercise.catalogId}`}
+            href={arenaLink(exercise, sessionId)}
             className="px-3 py-1.5 rounded-lg bg-neon-cyan/20 border border-neon-cyan text-neon-cyan font-bold text-[10px] tracking-[0.18em] uppercase hover:bg-neon-cyan/35 transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(0,255,255,0.25)]"
             style={{ fontFamily: "var(--font-audiowide)" }}
           >
-            <span>📹</span> TRACK IN ARENA →
+            <span aria-hidden="true">📹</span> TRACK IN ARENA →
           </Link>
         ) : (
-          <span className="text-[10px] text-white/40 italic">
-            Self-guided • Check off when done
-          </span>
+          <span className="text-[10px] text-white/40 italic">Self-guided • Check off when done</span>
         )}
 
-        {/* Completion Status Buttons */}
         {onStatusChange && (
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
+              aria-pressed={isCompleted}
               onClick={() => onStatusChange(isCompleted ? "pending" : "completed")}
               className={`px-2.5 py-1 rounded text-[10px] tracking-wider uppercase font-semibold transition-all ${
                 isCompleted
@@ -142,11 +164,11 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
             </button>
 
             <button
+              type="button"
+              aria-pressed={isSkipped}
               onClick={() => onStatusChange(isSkipped ? "pending" : "skipped")}
               className={`px-2 py-1 rounded text-[10px] uppercase transition-all ${
-                isSkipped
-                  ? "bg-red-600/80 text-white"
-                  : "bg-white/5 text-white/40 hover:text-white/70"
+                isSkipped ? "bg-red-600/80 text-white" : "bg-white/5 text-white/40 hover:text-white/70"
               }`}
               title="Skip this movement"
             >
@@ -154,16 +176,32 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
             </button>
 
             <button
+              type="button"
+              aria-pressed={isModified}
               onClick={() => setShowModNotes((n) => !n)}
               className={`px-2 py-1 rounded text-[10px] uppercase transition-all ${
-                isModified
-                  ? "bg-amber-600/60 text-white"
-                  : "bg-white/5 text-white/40 hover:text-white/70"
+                isModified ? "bg-amber-600/60 text-white" : "bg-white/5 text-white/40 hover:text-white/70"
               }`}
               title="Mark as modified (e.g. fewer reps, modified stance)"
             >
               Mod
             </button>
+
+            {!isPending && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowModNotes(false);
+                  setModNote("");
+                  onStatusChange("pending", "");
+                }}
+                className="px-1.5 py-1 rounded text-[10px] text-white/40 hover:text-white/80 transition-colors"
+                title="Reset to pending"
+                aria-label="Reset to pending"
+              >
+                ↺
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -176,11 +214,14 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
             placeholder="e.g. did 8 reps instead of 12, knee on floor"
             value={modNote}
             onChange={(e) => setModNote(e.target.value)}
+            maxLength={120}
+            aria-label="Describe your modification"
             className="flex-1 bg-black/60 border border-amber-500/30 rounded px-2 py-1 text-xs text-white focus:outline-none"
           />
           <button
+            type="button"
             onClick={() => {
-              onStatusChange("modified", modNote);
+              onStatusChange("modified", modNote.trim());
               setShowModNotes(false);
             }}
             className="px-2.5 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] uppercase"
@@ -191,4 +232,9 @@ export default function ExerciseItemCard({ exercise, onStatusChange }: Props) {
       )}
     </div>
   );
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 120) return `${seconds}s`;
+  return `${Math.round(seconds / 60)} min`;
 }

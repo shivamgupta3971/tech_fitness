@@ -8,6 +8,12 @@ interface ChatOptions {
   temperature: number;
   presencePenalty?: number;
   frequencyPenalty?: number;
+  /**
+   * Ask for a single JSON object (response_format: json_object). Plain prompting is not enough: in testing every
+   * provider eventually dropped a brace or truncated mid-object. With this set, a reply cut off by the token
+   * limit is treated as a failure so the next provider is tried instead of returning broken JSON.
+   */
+  json?: boolean;
 }
 
 interface Provider {
@@ -41,6 +47,7 @@ const PROVIDERS: Provider[] = [
 ];
 
 const COOLDOWN_MS = 10 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 30_000;
 const skipUntil = new Map<string, number>();
 
 /** True when at least one provider has an API key configured. */
@@ -70,11 +77,18 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
     if ((skipUntil.get(provider.name) ?? 0) > Date.now()) continue;
 
     try {
-      const client = new OpenAI({ apiKey, baseURL: provider.baseURL, defaultHeaders: provider.headers?.(apiKey) });
+      const client = new OpenAI({
+        apiKey,
+        baseURL: provider.baseURL,
+        defaultHeaders: provider.headers?.(apiKey),
+        timeout: REQUEST_TIMEOUT_MS,
+        maxRetries: 1,
+      });
       const completion = await client.chat.completions.create({
         model: provider.model,
         messages: opts.messages,
         temperature: opts.temperature,
+        ...(opts.json ? { response_format: { type: "json_object" as const } } : {}),
         ...(provider.reasoning
           ? { max_tokens: opts.maxTokens + 700, reasoning_effort: "low" as const }
           : {
@@ -85,7 +99,13 @@ export async function chatCompletion(opts: ChatOptions): Promise<string> {
             }),
       });
 
-      const text = completion.choices[0]?.message?.content?.trim();
+      const choice = completion.choices[0];
+      const text = choice?.message?.content?.trim();
+      if (text && opts.json && choice?.finish_reason === "length") {
+        lastError = new Error(`${provider.name} reply was cut off by the token limit`);
+        console.error(`[llm] ${provider.name} truncated a JSON reply, trying next provider`);
+        continue;
+      }
       if (text) return text;
       lastError = new Error(`${provider.name} returned an empty reply`);
     } catch (err) {

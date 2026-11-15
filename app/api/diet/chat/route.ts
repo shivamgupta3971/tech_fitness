@@ -3,12 +3,35 @@ import { chatCompletion, hasLlmProvider } from "../../../lib/llm";
 
 type ChatRole = "system" | "user" | "assistant";
 
+const MAX_MESSAGE_CHARS = 500;
+const MAX_HISTORY = 8;
+
+/** One-line-per-meal summary of the day the user is looking at (the old code sent a JSON dump cut off at 500 chars). */
+function summarizeDay(plan: unknown): string {
+  if (typeof plan !== "object" || plan === null) return "No day selected";
+  const day = plan as { date?: unknown; meals?: unknown; totalNutrition?: { calories?: unknown } };
+  if (!Array.isArray(day.meals)) return "No day selected";
+
+  const meals = day.meals
+    .slice(0, 8)
+    .map((m: { type?: unknown; name?: unknown; nutrition?: { calories?: unknown } }) => {
+      const kcal = typeof m?.nutrition?.calories === "number" ? ` (${m.nutrition.calories} kcal)` : "";
+      return `${String(m?.type ?? "meal")}: ${String(m?.name ?? "?").slice(0, 80)}${kcal}`;
+    })
+    .join("; ");
+  const total = typeof day.totalNutrition?.calories === "number" ? ` — day total ${day.totalNutrition.calories} kcal` : "";
+  return `${typeof day.date === "string" ? day.date : "today"}: ${meals}${total}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { message, profile, currentPlan, history } = await req.json();
 
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Missing message query" }, { status: 400 });
+    }
+    if (message.length > MAX_MESSAGE_CHARS) {
+      return NextResponse.json({ error: `Message too long (max ${MAX_MESSAGE_CHARS} characters)` }, { status: 400 });
     }
 
     if (!hasLlmProvider()) {
@@ -19,8 +42,8 @@ export async function POST(req: NextRequest) {
     }
 
     const allergiesStr =
-      profile?.allergies && profile.allergies.length > 0
-        ? profile.allergies.join(", ")
+      Array.isArray(profile?.allergies) && profile.allergies.length > 0
+        ? profile.allergies.map((a: unknown) => String(a).slice(0, 40)).join(", ")
         : "None declared";
 
     const systemPrompt = `You are FitVeda's AI Nutrition Assistant, a friendly, evidence-based sports dietitian specializing in Indian and global diets.
@@ -30,7 +53,7 @@ USER CONTEXT (Injected strictly by server):
 - ALLERGIES & RESTRICTIONS: ${allergiesStr}
 - Daily Target: ${profile?.targetCalories ? `${profile.targetCalories} kcal` : "Balanced"}
 - Budget: ${profile?.budget || "Moderate"}
-- Active Plan Summary: ${currentPlan ? JSON.stringify(currentPlan).substring(0, 500) : "Plan active"}
+- Day being viewed: ${summarizeDay(currentPlan)}
 
 CRITICAL SAFETY & ETHICAL RULES:
 1. NEVER recommend any food containing the user's declared allergies (${allergiesStr}).
@@ -44,11 +67,11 @@ CRITICAL SAFETY & ETHICAL RULES:
     ];
 
     if (Array.isArray(history)) {
-      for (const h of history.slice(-8)) {
-        if (h.role && h.content) {
+      for (const h of history.slice(-MAX_HISTORY)) {
+        if (h?.role && h?.content) {
           messages.push({
             role: h.role === "user" ? "user" : "assistant",
-            content: String(h.content),
+            content: String(h.content).slice(0, 1000),
           });
         }
       }

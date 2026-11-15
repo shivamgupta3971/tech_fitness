@@ -113,55 +113,163 @@ export function requiresProfessionalNotice(profile: UserProfile): boolean {
   return false;
 }
 
+/** Share of daily energy from each macro, rounded to whole percents (for display). */
+export function macroEnergyShare(t: Pick<MacroTargets, "calories" | "proteinG" | "carbsG" | "fatG">): {
+  protein: number;
+  carbs: number;
+  fat: number;
+} {
+  if (t.calories <= 0) return { protein: 0, carbs: 0, fat: 0 };
+  return {
+    protein: Math.round((t.proteinG * 4 * 100) / t.calories),
+    carbs: Math.round((t.carbsG * 4 * 100) / t.calories),
+    fat: Math.round((t.fatG * 9 * 100) / t.calories),
+  };
+}
+
 // ─── Allergen & Diet-Type Validation ─────────────────────────────────────────
+//
+// These checks are the app's safety net: every plan (LLM-written or built-in) must pass them before it
+// reaches the user. Matching is whole-word (a trailing plural "s"/"es" is allowed) so that
+//   "egg" does not flag eggplant (baingan), "oat" does not flag goat, "til" does not flag lentil —
+// while compound words that really are the allergen (buttermilk, raita, kheer) are listed explicitly.
+
+const regexCache = new Map<string, RegExp>();
+
+function wordRegex(keyword: string): RegExp {
+  let re = regexCache.get(keyword);
+  if (!re) {
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    re = new RegExp(`(?:^|[^a-z])${escaped}(?:e?s)?(?![a-z])`);
+    regexCache.set(keyword, re);
+  }
+  return re;
+}
+
+/** True when `keyword` appears in `text` as a whole word/phrase (plural tolerated). Expects lowercase text. */
+function hasWord(text: string, keyword: string): boolean {
+  return wordRegex(keyword).test(text);
+}
 
 /**
- * Common allergen keyword map. Keys are canonical allergen names.
- * Values are keyword arrays for matching against ingredient text.
+ * Phrases that contain a dairy/egg word but are not dairy/egg. Removed before dairy, egg and diet-type
+ * checks only — never before the nut check, because "almond milk" and "peanut butter" are still nuts.
+ */
+const NOT_ANIMAL_PRODUCT = [
+  "coconut milk",
+  "coconut cream",
+  "almond milk",
+  "soy milk",
+  "soya milk",
+  "oat milk",
+  "rice milk",
+  "cashew milk",
+  "peanut butter",
+  "almond butter",
+  "cashew butter",
+  "cocoa butter",
+  "shea butter",
+  "butter bean",
+  "butter beans",
+];
+
+function stripNotAnimalProducts(text: string): string {
+  let out = text;
+  for (const phrase of NOT_ANIMAL_PRODUCT) out = out.split(phrase).join(" ");
+  return out;
+}
+
+/**
+ * Canonical allergen names → words that indicate them in an ingredient. Includes Indian names.
+ * Values are matched as whole words; see the note above about compounds.
  */
 export const ALLERGEN_KEYWORDS: Record<string, string[]> = {
-  gluten: ["wheat", "barley", "rye", "maida", "atta", "bread", "roti", "naan", "pita", "pasta", "noodle", "semolina", "suji", "rava", "oat"],
-  dairy: ["milk", "paneer", "ghee", "butter", "cream", "curd", "yogurt", "dahi", "cheese", "lassi", "whey", "lactose", "khoya", "mawa"],
-  nuts: ["peanut", "groundnut", "almond", "cashew", "walnut", "pistachio", "hazelnut", "pecan", "macadamia", "pine nut", "chestnut"],
-  soy: ["soy", "soya", "tofu", "edamame", "tempeh", "miso"],
-  egg: ["egg", "mayonnaise", "mayo", "albumen"],
-  shellfish: ["shrimp", "prawn", "crab", "lobster", "crayfish", "scallop", "clam", "mussel", "oyster"],
-  fish: ["fish", "salmon", "tuna", "sardine", "mackerel", "tilapia", "rohu", "catla", "hilsa"],
-  sesame: ["sesame", "til", "tahini"],
+  gluten: [
+    "wheat", "barley", "rye", "maida", "atta", "bread", "roti", "chapati", "chapatti", "phulka", "paratha",
+    "puri", "poori", "thepla", "naan", "kulcha", "pita", "pasta", "noodle", "semolina", "suji", "sooji",
+    "rava", "upma", "oat", "oatmeal", "couscous", "seitan", "bulgur", "dalia", "daliya", "toast", "pav", "bun",
+    "tortilla", "pizza", "muesli", "granola", "biscuit", "cracker",
+  ],
+  dairy: [
+    "milk", "paneer", "ghee", "butter", "cream", "curd", "yogurt", "yoghurt", "dahi", "cheese", "lassi",
+    "buttermilk", "chaas", "chhaas", "raita", "kheer", "malai", "kulfi", "khoya", "mawa", "whey", "casein",
+    "lactose", "custard", "shrikhand", "rasmalai", "milkshake", "cheesecake", "mozzarella", "cheddar", "parmesan", "ricotta",
+  ],
+  nuts: [
+    "nut", "peanut", "groundnut", "moongfali", "almond", "badam", "cashew", "kaju", "walnut", "akhrot",
+    "pistachio", "pista", "hazelnut", "pecan", "macadamia", "pine nut", "chestnut", "nutella", "praline",
+    "marzipan", "granola", "muesli", "chikki", "trail mix", "satay",
+  ],
+  soy: ["soy", "soya", "soybean", "soyabean", "tofu", "edamame", "tempeh", "miso", "nutrela", "mealmaker"],
+  egg: ["egg", "omelette", "omelet", "anda", "mayonnaise", "mayo", "albumen", "meringue"],
+  shellfish: ["shrimp", "prawn", "crab", "lobster", "crayfish", "scallop", "clam", "mussel", "oyster", "squid", "calamari", "octopus", "shellfish"],
+  fish: [
+    "fish", "salmon", "tuna", "sardine", "mackerel", "tilapia", "rohu", "catla", "hilsa", "pomfret", "anchovy",
+    "anchovies", "cod", "trout", "bombil", "surmai", "bangda", "machli", "machhi",
+  ],
+  sesame: ["sesame", "til", "tahini", "gingelly"],
 };
 
-/** Ingredients that are non-vegetarian (for vegetarian/vegan validation) */
+/** Common spellings people type for an allergy → canonical key above. */
+const ALLERGEN_ALIASES: Record<string, string> = {
+  peanut: "nuts",
+  peanuts: "nuts",
+  "tree nut": "nuts",
+  "tree nuts": "nuts",
+  nut: "nuts",
+  lactose: "dairy",
+  milk: "dairy",
+  wheat: "gluten",
+  soya: "soy",
+  eggs: "egg",
+  seafood: "shellfish",
+  prawn: "shellfish",
+  prawns: "shellfish",
+};
+
+function canonicalAllergen(declared: string): string {
+  const a = declared.trim().toLowerCase();
+  return ALLERGEN_ALIASES[a] ?? a;
+}
+
+/** Ingredients that are meat, fish or poultry. */
 const NON_VEG_KEYWORDS = [
-  "chicken", "mutton", "lamb", "beef", "pork", "fish", "prawn", "shrimp",
-  "crab", "lobster", "meat", "bacon", "ham", "sausage", "keema", "biryani with meat",
-  "rohu", "catla", "hilsa", "salmon", "tuna", "sardine",
+  "chicken", "mutton", "lamb", "beef", "pork", "bacon", "ham", "sausage", "salami", "pepperoni", "keema",
+  "meat", "meatball", "goat", "turkey", "duck", "liver", "steak", "lard", "tallow", "seafood",
+  "shrimp", "prawn", "crab", "lobster", "squid", "fish", "rohu", "catla", "hilsa", "salmon", "tuna",
+  "sardine", "mackerel", "pomfret", "tilapia", "anchovy", "anchovies", "bombil", "surmai", "bangda", "machli", "cod", "trout",
 ];
 
-/** Ingredients not allowed for vegans */
+/** Everything above plus dairy, eggs and honey. */
 const NON_VEGAN_KEYWORDS = [
   ...NON_VEG_KEYWORDS,
-  "milk", "curd", "dahi", "paneer", "ghee", "butter", "cream", "cheese",
-  "lassi", "khoya", "mawa", "honey", "egg",
+  "milk", "curd", "dahi", "paneer", "ghee", "butter", "cream", "cheese", "yogurt", "yoghurt", "lassi",
+  "buttermilk", "chaas", "chhaas", "raita", "kheer", "malai", "kulfi", "khoya", "mawa", "whey", "casein",
+  "custard", "shrikhand", "rasmalai", "honey", "gelatin", "gelatine",
 ];
 
-/** Eggs are allowed in "vegetarian_eggs" but not strict vegetarian or vegan */
-const EGG_KEYWORDS = ["egg", "omelette", "scrambled", "boiled egg", "fried egg", "egg white", "egg yolk"];
+/** Eggs are allowed in "vegetarian_eggs" but not strict vegetarian or vegan. */
+const EGG_KEYWORDS = ["egg", "omelette", "omelet", "anda", "mayonnaise", "mayo", "albumen", "meringue"];
 
 /**
  * Check if a list of ingredient strings contains any declared allergen.
- * Returns the first offending allergen name, or null if clean.
+ * Returns the first offending allergen as the user declared it, or null if clean.
  */
 export function findAllergenViolation(
   ingredients: string[],
   userAllergies: string[]
 ): string | null {
   const lower = ingredients.map((i) => i.toLowerCase());
-  for (const allergen of userAllergies) {
-    const keywords = ALLERGEN_KEYWORDS[allergen.toLowerCase()] ?? [allergen.toLowerCase()];
-    for (const kw of keywords) {
-      if (lower.some((i) => i.includes(kw))) {
-        return allergen;
-      }
+  const lowerAnimal = lower.map(stripNotAnimalProducts);
+
+  for (const declared of userAllergies) {
+    const key = canonicalAllergen(declared);
+    if (!key) continue;
+    const keywords = ALLERGEN_KEYWORDS[key] ?? [key];
+    // Plant milks / nut butters are not dairy or egg, but they must still trip the nut check.
+    const haystack = key === "dairy" || key === "egg" ? lowerAnimal : lower;
+    if (keywords.some((kw) => haystack.some((text) => hasWord(text, kw)))) {
+      return declared;
     }
   }
   return null;
@@ -175,24 +283,22 @@ export function findDietTypeViolation(
   ingredients: string[],
   dietType: DietType
 ): string | null {
-  const lower = ingredients.map((i) => i.toLowerCase()).join(" ");
+  if (dietType === "non_vegetarian") return null;
+
+  const text = ingredients.map((i) => stripNotAnimalProducts(i.toLowerCase()));
+  const firstHit = (keywords: string[]) => keywords.find((kw) => text.some((t) => hasWord(t, kw)));
 
   if (dietType === "vegan") {
-    for (const kw of NON_VEGAN_KEYWORDS) {
-      if (lower.includes(kw)) return `"${kw}" not allowed for vegan diet`;
-    }
-  } else if (dietType === "vegetarian") {
-    for (const kw of NON_VEG_KEYWORDS) {
-      if (lower.includes(kw)) return `"${kw}" not allowed for vegetarian diet`;
-    }
-    for (const kw of EGG_KEYWORDS) {
-      if (lower.includes(kw)) return `eggs not allowed for strict vegetarian`;
-    }
-  } else if (dietType === "vegetarian_eggs") {
-    for (const kw of NON_VEG_KEYWORDS) {
-      if (lower.includes(kw)) return `"${kw}" not allowed for vegetarian diet`;
-    }
+    const hit = firstHit(NON_VEGAN_KEYWORDS) ?? firstHit(EGG_KEYWORDS);
+    if (hit) return `"${hit}" not allowed for vegan diet`;
+    return null;
   }
-  // non_vegetarian: no restrictions
+
+  const meat = firstHit(NON_VEG_KEYWORDS);
+  if (meat) return `"${meat}" not allowed for vegetarian diet`;
+
+  if (dietType === "vegetarian" && firstHit(EGG_KEYWORDS)) {
+    return `eggs not allowed for strict vegetarian`;
+  }
   return null;
 }
